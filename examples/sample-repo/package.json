@@ -1,0 +1,13 @@
+{
+  "name": "sample-widget-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fixture product for SHTD e2e — planted drift, broken links, stale OpenAPI refs",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

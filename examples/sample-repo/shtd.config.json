@@ -1,0 +1,17 @@
+{
+  "docs": ["docs/**/*.{md,mdx}"],
+  "openapi": ["openapi/openapi.yaml"],
+  "ignore": ["**/node_modules/**"],
+  "healPaths": ["docs/**"],
+  "autoMerge": {
+    "enabled": false,
+    "minConfidence": "high",
+    "requireGreenCi": true
+  },
+  "schedule": {
+    "enabled": true,
+    "cron": "0 6 * * 1",
+    "description": "Weekly Monday scan"
+  },
+  "prLabels": ["self-heal"]
+}

@@ -1,0 +1,125 @@
+name: Self-Healing Technical Documentation
+description: >
+  Run shtd scan/heal, write a JSON report, optionally open a docs-only heal PR,
+  and post a findings summary on the triggering pull request.
+author: shtd
+
+branding:
+  icon: book-open
+  color: blue
+
+inputs:
+  path:
+    description: Repository path to scan (relative to the workspace / working-directory)
+    required: false
+    default: "."
+  token:
+    description: GitHub token with contents:write and pull-requests:write as needed
+    required: false
+    default: ${{ github.token }}
+  config:
+    description: >
+      Optional path to an shtd.config.json to use for this run (copied into the
+      scan path as shtd.config.json when set)
+    required: false
+    default: ""
+  mode:
+    description: '"scan" (detect only) or "heal" (detect + propose/apply patches)'
+    required: false
+    default: "heal"
+  create-pr:
+    description: >
+      When mode is heal and patches exist, commit on a branch and open a GitHub PR
+      (true/false)
+    required: false
+    default: "true"
+  apply:
+    description: Write docs-only patches to the working tree before creating a PR
+    required: false
+    default: "true"
+  report-path:
+    description: Workspace-relative path for the JSON report artifact
+    required: false
+    default: "shtd-report.json"
+  comment-on-pr:
+    description: Post a findings summary comment on the triggering pull request
+    required: false
+    default: "true"
+  working-directory:
+    description: Monorepo / repo root where packages/cli is built (default workspace root)
+    required: false
+    default: "."
+  shtd-bin:
+    description: >
+      Override how to invoke the CLI. Default resolves to
+      node <working-directory>/packages/cli/dist/index.js
+    required: false
+    default: ""
+  pr-branch-prefix:
+    description: Branch name prefix for heal PRs
+    required: false
+    default: "shtd/heal"
+
+outputs:
+  report-path:
+    description: Path to the JSON report (upload this as a workflow artifact)
+    value: ${{ steps.run.outputs.report-path }}
+  finding-count:
+    description: Total findings in the report
+    value: ${{ steps.run.outputs.finding-count }}
+  patch-count:
+    description: Number of patched files
+    value: ${{ steps.run.outputs.patch-count }}
+  pr-url:
+    description: URL of the heal PR when one was created
+    value: ${{ steps.pr.outputs.pr-url }}
+  status:
+    description: Run status (completed / failed / skipped)
+    value: ${{ steps.run.outputs.status }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve CLI and run shtd
+      id: run
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        GH_TOKEN: ${{ inputs.token }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_APPLY: ${{ inputs.apply }}
+        INPUT_REPORT_PATH: ${{ inputs.report-path }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_SHTD_BIN: ${{ inputs.shtd-bin }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: node "$ACTION_PATH/scripts/run-shtd.mjs"
+
+    - name: Create heal pull request
+      id: pr
+      if: inputs.mode == 'heal' && inputs.create-pr == 'true'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        GH_TOKEN: ${{ inputs.token }}
+        INPUT_REPORT_PATH: ${{ steps.run.outputs.report-path }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_PR_BRANCH_PREFIX: ${{ inputs.pr-branch-prefix }}
+        INPUT_PATH: ${{ inputs.path }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: node "$ACTION_PATH/scripts/create-heal-pr.mjs"
+
+    - name: Comment summary on pull request
+      if: inputs.comment-on-pr == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        GH_TOKEN: ${{ inputs.token }}
+        INPUT_REPORT_PATH: ${{ steps.run.outputs.report-path }}
+        INPUT_PR_URL: ${{ steps.pr.outputs.pr-url }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: node "$ACTION_PATH/scripts/comment-summary.mjs"

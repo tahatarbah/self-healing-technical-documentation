@@ -1,0 +1,43 @@
+# Minimal consumer example — prefer the monorepo dogfood workflow:
+#   ../../.github/workflows/shtd.yml
+name: shtd
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  shtd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @shtd/cli... build
+      - id: shtd
+        uses: ./packages/action
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          create-pr: ${{ github.event_name != 'pull_request' }}
+          comment-on-pr: ${{ github.event_name == 'pull_request' }}
+          report-path: shtd-report.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shtd-report
+          path: ${{ steps.shtd.outputs.report-path }}

@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+.next/
+out/
+*.tsbuildinfo
+.turbo/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs / coverage
+*.log
+coverage/
+.nyc_output/
+
+# Misc
+*.local
+.cache/
+
+# shtd action / CLI reports
+shtd-report.json
+shtd-*-report.json
+.shtd-comment-*.md
+
+# --- archive safety (added) ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.env
+.env.*
+!.env.example
+node_modules/
+.pnpm-store/
+.next/
+dist/
+build/
+out/
+.turbo/
+.cache/
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.db
+*.sqlite3
+.pgdata/

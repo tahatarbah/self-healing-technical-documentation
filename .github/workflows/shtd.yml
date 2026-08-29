@@ -1,0 +1,103 @@
+# Self-Healing Technical Documentation
+#
+# Runs shtd scan/heal on this monorepo (dogfood) and the sample fixture.
+# Requires: contents:write + pull-requests:write for heal PRs and summary comments.
+
+name: shtd
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  schedule:
+    # Weekly Monday 06:00 UTC
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "scan or heal"
+        required: false
+        default: heal
+        type: choice
+        options: [scan, heal]
+      path:
+        description: "Path to scan"
+        required: false
+        default: .
+      create_pr:
+        description: "Open a heal PR when patches exist"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: shtd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  heal:
+    name: Scan / heal docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build CLI (and dependencies)
+        run: pnpm --filter @shtd/cli... build
+
+      - name: Run shtd action
+        id: shtd
+        uses: ./packages/action
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ github.event_name == 'workflow_dispatch' && inputs.path || '.' }}
+          mode: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'heal' }}
+          # Comments on PRs; heal PRs on push / schedule / dispatch (respects create_pr).
+          create-pr: ${{ github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.create_pr) }}
+          # Only write patches when we intend to open a heal PR.
+          apply: ${{ github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.create_pr) }}
+          comment-on-pr: ${{ github.event_name == 'pull_request' }}
+          report-path: shtd-report.json
+
+      - name: Upload JSON report
+        if: always() && steps.shtd.outputs.report-path != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: shtd-report
+          path: ${{ steps.shtd.outputs.report-path }}
+          if-no-files-found: warn
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## shtd results"
+            echo ""
+            echo "- status: \`${{ steps.shtd.outputs.status }}\`"
+            echo "- findings: ${{ steps.shtd.outputs.finding-count }}"
+            echo "- patches: ${{ steps.shtd.outputs.patch-count }}"
+            echo "- report: \`${{ steps.shtd.outputs.report-path }}\`"
+            if [ -n "${{ steps.shtd.outputs.pr-url }}" ]; then
+              echo "- heal PR: ${{ steps.shtd.outputs.pr-url }}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

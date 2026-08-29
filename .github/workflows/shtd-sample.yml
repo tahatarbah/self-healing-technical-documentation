@@ -1,0 +1,50 @@
+# Example: consume @shtd/action against the planted fixture repo.
+# Copy into a consumer workflow or run via workflow_dispatch from shtd.yml patterns.
+
+name: shtd-sample
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "examples/sample-repo/**"
+      - "packages/core/**"
+      - "packages/cli/**"
+      - "packages/action/**"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @shtd/cli... build
+
+      - id: shtd
+        uses: ./packages/action
+        with:
+          path: examples/sample-repo
+          mode: scan
+          create-pr: "false"
+          comment-on-pr: ${{ github.event_name == 'pull_request' }}
+          report-path: shtd-sample-report.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shtd-sample-report
+          path: ${{ steps.shtd.outputs.report-path }}

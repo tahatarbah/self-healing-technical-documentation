@@ -1,0 +1,102 @@
+openapi: 3.0.3
+info:
+  title: Sample Widget API
+  version: 2.0.0
+  description: Current OpenAPI — docs/openapi.md still references removed ops.
+paths:
+  /widgets:
+    get:
+      operationId: listWidgets
+      summary: List widgets (cursor pagination)
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Widget"
+    post:
+      operationId: createWidget
+      summary: Create a widget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWidgetInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Widget"
+  /widgets/{id}:
+    get:
+      operationId: getWidget
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Widget"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteWidget
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+components:
+  schemas:
+    WidgetStatus:
+      type: string
+      enum: [draft, active, archived]
+    Widget:
+      type: object
+      required: [id, name, ownerId, status, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        ownerId:
+          type: string
+        status:
+          $ref: "#/components/schemas/WidgetStatus"
+        createdAt:
+          type: string
+          format: date-time
+    CreateWidgetInput:
+      type: object
+      required: [name, ownerId]
+      properties:
+        name:
+          type: string
+        ownerId:
+          type: string

@@ -1,0 +1,11 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+autoInstallPeers: true
+strictPeerDependencies: false
+confirmModulesPurge: false
+strictDepBuilds: true
+allowBuilds:
+  esbuild: true
+  sharp: true

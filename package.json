@@ -1,0 +1,22 @@
+{
+  "name": "self-healing-technical-documentation",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Self-healing technical documentation — detect drift, propose patches, heal via PR",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "test:e2e": "node scripts/e2e-sample-repo.mjs"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  }
+}
